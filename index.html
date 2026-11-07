@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Number Pattern Finder & Analyzer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center justify-start p-4 sm:p-8">
+    <div class="max-w-xl w-full bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6 sm:p-8">
+        
+        <!-- Header -->
+        <div class="text-center mb-6">
+            <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">
+                Number Pattern Analyzer
+            </h1>
+            <p class="text-slate-400 text-sm mt-1">Input numbers, save them, and discover hidden patterns once you have at least 3 unique numbers.</p>
+        </div>
+
+        <!-- Input Form -->
+        <form id="numberForm" class="flex gap-3 mb-6">
+            <input 
+                type="number" 
+                id="numberInput" 
+                placeholder="Enter any number..." 
+                required
+                class="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-lg"
+            >
+            <button 
+                type="submit"
+                class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-6 py-3 rounded-xl transition-all shadow-lg shadow-indigo-600/30"
+            >
+                Save
+            </button>
+        </form>
+
+        <!-- Saved Numbers Section -->
+        <div class="mb-6 bg-slate-800/50 border border-slate-800 rounded-xl p-4">
+            <div class="flex justify-between items-center mb-3">
+                <h2 class="font-semibold text-slate-300 text-sm uppercase tracking-wider">Saved Numbers</h2>
+                <div class="flex gap-2">
+                    <span id="uniqueCountBadge" class="text-xs px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-400 font-medium">0 Unique</span>
+                    <button id="clearBtn" class="text-xs text-rose-400 hover:text-rose-300 transition-colors">Clear All</button>
+                </div>
+            </div>
+            <div id="numbersList" class="flex flex-wrap gap-2 max-h-36 overflow-y-auto p-1">
+                <span class="text-slate-500 text-sm italic">No numbers saved yet. Start adding!</span>
+            </div>
+        </div>
+
+        <!-- Find Pattern Button -->
+        <button 
+            id="findPatternBtn" 
+            disabled
+            class="w-full bg-gradient-to-r from-indigo-600 to-cyan-600 text-white font-bold py-3.5 px-6 rounded-xl transition-all shadow-lg shadow-cyan-600/20 opacity-50 cursor-not-allowed mb-6"
+        >
+            Find Patterns (Need at least 3 unique numbers)
+        </button>
+
+        <!-- Results Section -->
+        <div id="resultsSection" class="hidden space-y-4 border-t border-slate-800 pt-6">
+            <h2 class="text-lg font-bold text-cyan-400">Analysis & Patterns Found</h2>
+            <div id="analysisContent" class="space-y-3 text-sm text-slate-300">
+                <!-- Dynamic Pattern Results will inject here -->
+            </div>
+        </div>
+
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        const STORAGE_KEY = 'pattern_finder_numbers_v1';
+
+        const numberForm = document.getElementById('numberForm');
+        const numberInput = document.getElementById('numberInput');
+        const numbersList = document.getElementById('numbersList');
+        const uniqueCountBadge = document.getElementById('uniqueCountBadge');
+        const findPatternBtn = document.getElementById('findPatternBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const resultsSection = document.getElementById('resultsSection');
+        const analysisContent = document.getElementById('analysisContent');
+
+        function getNumbers() {
+            try {
+                return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function saveNumbers(nums) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(nums));
+            render();
+        }
+
+        function render() {
+            const nums = getNumbers();
+            const uniqueNums = [...new Set(nums)];
+            
+            // Update badge
+            uniqueCountBadge.textContent = `${uniqueNums.length} Unique`;
+
+            // Render tags
+            if (nums.length === 0) {
+                numbersList.innerHTML = '<span class="text-slate-500 text-sm italic">No numbers saved yet. Start adding!</span>';
+            } else {
+                numbersList.innerHTML = nums.map((n, idx) => `
+                    <span class="inline-flex items-center gap-1.5 bg-slate-800 border border-slate-700 px-3 py-1 rounded-lg text-sm">
+                        ${n}
+                        <button onclick="removeNumber(${idx})" class="text-slate-500 hover:text-rose-400">&times;</button>
+                    </span>
+                `).join('');
+            }
+
+            // Enable/disable pattern button (Requires >= 3 UNIQUE numbers)
+            if (uniqueNums.length >= 3) {
+                findPatternBtn.disabled = false;
+                findPatternBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                findPatternBtn.classList.add('hover:opacity-90', 'cursor-pointer');
+                findPatternBtn.textContent = 'Find Patterns';
+            } else {
+                findPatternBtn.disabled = true;
+                findPatternBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                findPatternBtn.classList.remove('hover:opacity-90', 'cursor-pointer');
+                findPatternBtn.textContent = `Find Patterns (Need ${3 - uniqueNums.length} more unique number${3 - uniqueNums.length === 1 ? '' : 's'})`;
+                resultsSection.classList.add('hidden');
+            }
+        }
+
+        window.removeNumber = function(index) {
+            const nums = getNumbers();
+            nums.splice(index, 1);
+            saveNumbers(nums);
+        }
+
+        numberForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const val = parseFloat(numberInput.value);
+            if (!isNaN(val)) {
+                const nums = getNumbers();
+                nums.push(val);
+                saveNumbers(nums);
+                numberInput.value = '';
+                numberInput.focus();
+            }
+        });
+
+        clearBtn.addEventListener('click', () => {
+            if (confirm('Are you sure you want to clear all saved numbers?')) {
+                localStorage.removeItem(STORAGE_KEY);
+                resultsSection.classList.add('hidden');
+                render();
+            }
+        });
+
+        // Pattern Analysis Engine
+        findPatternBtn.addEventListener('click', () => {
+            const rawNums = getNumbers();
+            const nums = [...new Set(rawNums)].sort((a, b) => a - b);
+            
+            if (nums.length < 3) return;
+
+            let html = '';
+
+            // 1. Basic Stats
+            const sum = nums.reduce((a, b) => a + b, 0);
+            const mean = sum / nums.length;
+            const min = nums[0];
+            const max = nums[nums.length - 1];
+            const range = max - min;
+
+            html += `<div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700">
+                <strong class="text-indigo-400 block mb-1">📊 Basic Summary</strong>
+                <p>Sorted Unique Set: [${nums.join(', ')}]</p>
+                <p>Sum: ${sum} | Mean: ${mean.toFixed(2)} | Min: ${min} | Max: ${max} | Range: ${range}</p>
+            </div>`;
+
+            // 2. Progression Check (Arithmetic / Geometric)
+            let isArithmetic = true;
+            let diff = nums[1] - nums[0];
+            for (let i = 2; i < nums.length; i++) {
+                if (nums[i] - nums[i-1] !== diff) {
+                    isArithmetic = false;
+                    break;
+                }
+            }
+            if (isArithmetic) {
+                html += `<div class="bg-indigo-950/40 p-3 rounded-xl border border-indigo-900">
+                    <strong class="text-indigo-300 block mb-1">📈 Arithmetic Progression Detected</strong>
+                    <p>Constant Common Difference ($d$) = <strong>${diff}</strong></p>
+                </div>`;
+            }
+
+            let isGeometric = true;
+            if (nums[0] !== 0) {
+                let ratio = nums[1] / nums[0];
+                for (let i = 2; i < nums.length; i++) {
+                    if (nums[i-1] === 0 || nums[i] / nums[i-1] !== ratio) {
+                        isGeometric = false;
+                        break;
+                    }
+                }
+                if (isGeometric && !isNaN(ratio)) {
+                    html += `<div class="bg-cyan-950/40 p-3 rounded-xl border border-cyan-900">
+                        <strong class="text-cyan-300 block mb-1">📉 Geometric Progression Detected</strong>
+                        <p>Constant Common Ratio ($r$) = <strong>${ratio}</strong></p>
+                    </div>`;
+                }
+            }
+
+            // 3. Differences between adjacent elements
+            const diffs = [];
+            for (let i = 1; i < nums.length; i++) {
+                diffs.push(nums[i] - nums[i-1]);
+            }
+            html += `<div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700">
+                <strong class="text-indigo-400 block mb-1">🔀 First-Order Differences</strong>
+                <p>[${diffs.join(', ')}]</p>
+            </div>`;
+
+            // 4. Parity Analysis (Even/Odd)
+            const evens = nums.filter(n => n % 2 === 0);
+            const odds = nums.filter(n => n % 2 !== 0);
+            html += `<div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700">
+                <strong class="text-indigo-400 block mb-1">⚖️ Parity Breakdown</strong>
+                <p>Even numbers (${evens.length}): ${evens.join(', ') || 'None'}</p>
+                <p>Odd numbers (${odds.length}): ${odds.join(', ') || 'None'}</p>
+            </div>`;
+
+            // 5. Prime check
+            function isPrime(n) {
+                if (n <= 1 || !Number.isInteger(n)) return false;
+                for (let i = 2; i <= Math.sqrt(n); i++) {
+                    if (n % i === 0) return false;
+                }
+                return true;
+            }
+            const primes = nums.filter(n => isPrime(n));
+            if (primes.length > 0) {
+                html += `<div class="bg-emerald-950/40 p-3 rounded-xl border border-emerald-900">
+                    <strong class="text-emerald-400 block mb-1">✨ Prime Numbers Found</strong>
+                    <p>Primes in your set: <strong>${primes.join(', ')}</strong></p>
+                </div>`;
+            }
+
+            analysisContent.innerHTML = html;
+            resultsSection.classList.remove('hidden');
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
+        });
+
+        // Initial render check
+        render();
+    </script>
+</body>
+</html>
